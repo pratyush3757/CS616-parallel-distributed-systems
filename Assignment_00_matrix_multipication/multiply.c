@@ -100,10 +100,18 @@ void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
         args[i] = x;
         status = pthread_create(&threads[i], NULL,
                                 multiply_scoped, (void *) &args[i]);
+        if (status != 0) {
+            perror("pthread_create failed");
+            exit(1);
+        }
     }
 
     for(size_t i = 0; i < NTHREADS; i++) {
         status = pthread_join(threads[i], NULL);
+        if (status != 0) {
+            perror("pthread_join failed");
+            exit(1);
+        }
     }
 }
 
@@ -121,10 +129,18 @@ void multiply_transposed_multithreaded(uint64_t (*U), uint64_t (*V),
         args[i] = x;
         status = pthread_create(&threads[i], NULL,
                                 multiply_transposed_scoped, (void *) &args[i]);
+        if (status != 0) {
+            perror("pthread_create failed");
+            exit(1);
+        }
     }
 
     for(size_t i = 0; i < NTHREADS; i++) {
         status = pthread_join(threads[i], NULL);
+        if (status != 0) {
+            perror("pthread_join failed");
+            exit(1);
+        }
     }
 }
 
