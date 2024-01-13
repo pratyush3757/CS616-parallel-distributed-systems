@@ -6,6 +6,7 @@
 #include <time.h>
 
 #define NTHREADS 8
+#define M_SIZE 2048
 
 typedef struct {
     uint64_t (*a);
@@ -21,28 +22,28 @@ typedef struct {
     size_t start, rows;
 } thread_args_t;
 
-uint64_t A[2048 * 2048], B[2048 * 2048], C[2048 * 2048], D[2048 * 2048];
+uint64_t A[M_SIZE * M_SIZE], B[M_SIZE * M_SIZE], C[M_SIZE * M_SIZE], D[M_SIZE * M_SIZE];
 
 static inline size_t idx(size_t i, size_t j) {
-    return i * 2048 + j;
+    return i * M_SIZE + j;
 }
 
 void fill_matrix_random(uint64_t (*ARR)) {
-    for(size_t i = 0; i < 2048; i++) {
-        for(size_t j = 0; j < 2048; j++) {
+    for(size_t i = 0; i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
             ARR[idx(i,j)] = rand()%1000;
         }
     }
 }
 void zero_out_matrix(uint64_t (*ARR)) {
-    memset(ARR, 0, 2048 * 2048 * sizeof(uint64_t));
+    memset(ARR, 0, M_SIZE * M_SIZE * sizeof(uint64_t));
 }
 
 void multiply(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
-    for(size_t i = 0; i < 2048; i++) {
-        for(size_t j = 0; j < 2048; j++) {
-            for(size_t k = 0; k < 2048; k++) {
+    for(size_t i = 0; i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
+            for(size_t k = 0; k < M_SIZE; k++) {
                 OUT[idx(i,j)] += U[idx(i,k)] * V[idx(k,j)];
             }
         }
@@ -51,9 +52,9 @@ void multiply(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
 
 void multiply_transposed(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
-    for(size_t i = 0; i < 2048; i++) {
-        for(size_t j = 0; j < 2048; j++) {
-            for(size_t k = 0; k < 2048; k++) {
+    for(size_t i = 0; i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
+            for(size_t k = 0; k < M_SIZE; k++) {
                 OUT[idx(i,j)] += U[idx(i,k)] * V[idx(j,k)];
             }
         }
@@ -63,9 +64,9 @@ void multiply_transposed(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
 void *multiply_scoped(void *x) {
     thread_args_t args;
     args = *(thread_args_t *)x;
-    for(size_t i = args.start; i < args.start + args.rows && i < 2048; i++) {
-        for(size_t j = 0; j < 2048; j++) {
-            for(size_t k = 0; k < 2048; k++) {
+    for(size_t i = args.start; i < args.start + args.rows && i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
+            for(size_t k = 0; k < M_SIZE; k++) {
                 args.OUT[idx(i,j)] += args.U[idx(i,k)] * args.V[idx(k,j)];
             }
         }
@@ -76,9 +77,9 @@ void *multiply_scoped(void *x) {
 void *multiply_transposed_scoped(void *x) {
     thread_args_t args;
     args = *(thread_args_t *)x;
-    for(size_t i = args.start; i < args.start + args.rows && i < 2048; i++) {
-        for(size_t j = 0; j < 2048; j++) {
-            for(size_t k = 0; k < 2048; k++) {
+    for(size_t i = args.start; i < args.start + args.rows && i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
+            for(size_t k = 0; k < M_SIZE; k++) {
                 args.OUT[idx(i,j)] += args.U[idx(i,k)] * args.V[idx(j,k)];
             }
         }
@@ -92,7 +93,7 @@ void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
     pthread_t threads[NTHREADS];
     thread_args_t args[NTHREADS];
     int status;
-    size_t rows = 2048 / NTHREADS;
+    size_t rows = M_SIZE / NTHREADS;
 
     for(size_t i = 0; i < NTHREADS; i++) {
         size_t start = rows * i;
@@ -121,7 +122,7 @@ void multiply_transposed_multithreaded(uint64_t (*U), uint64_t (*V),
     pthread_t threads[NTHREADS];
     thread_args_t args[NTHREADS];
     int status;
-    size_t rows = 2048 / NTHREADS;
+    size_t rows = M_SIZE / NTHREADS;
 
     for(size_t i = 0; i < NTHREADS; i++) {
         size_t start = rows * i;
@@ -146,16 +147,16 @@ void multiply_transposed_multithreaded(uint64_t (*U), uint64_t (*V),
 
 void add(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
-    for(size_t i = 0; i < 2048; i++) {
-        for(size_t j = 0; j < 2048; j++) {
+    for(size_t i = 0; i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
             OUT[idx(i,j)] = U[idx(i,j)] + V[idx(i,j)];
         }
     }
 }
 
 void transpose(uint64_t (*U), uint64_t (*OUT)) {
-    for(size_t i = 0; i < 2048; i++) {
-        for(size_t j = 0; j < 2048; j++) {
+    for(size_t i = 0; i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
             OUT[idx(j,i)] = U[idx(i,j)];
         }
     }
@@ -239,8 +240,8 @@ int main(int argc, char *argv[])
     simple_eqn_op_transposed_multithreaded(pointers);
     // zero_out_matrix(pointers.a);
     // swap_ptrs(&pointers.a, &pointers.d);
-    // for(size_t i = 0; i < 2048; i++) {
-    //     for(size_t j = 0; j < 2048; j++) {
+    // for(size_t i = 0; i < M_SIZE; i++) {
+    //     for(size_t j = 0; j < M_SIZE; j++) {
     //         printf("%" PRIu64 ", ", pointers.a[i][j]);
     //     }
     //     printf("\n");
