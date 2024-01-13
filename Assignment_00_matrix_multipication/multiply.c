@@ -8,49 +8,53 @@
 #define NTHREADS 8
 
 typedef struct {
-    uint64_t (*a)[2048];
-    uint64_t (*b)[2048];
-    uint64_t (*c)[2048];
-    uint64_t (*d)[2048];
+    uint64_t (*a);
+    uint64_t (*b);
+    uint64_t (*c);
+    uint64_t (*d);
 } matrix_args_t;
 
 typedef struct {
-    uint64_t (*U)[2048];
-    uint64_t (*V)[2048];
-    uint64_t (*OUT)[2048];
+    uint64_t (*U);
+    uint64_t (*V);
+    uint64_t (*OUT);
     size_t start, rows;
 } thread_args_t;
 
-uint64_t A[2048][2048], B[2048][2048], C[2048][2048], D[2048][2048];
+uint64_t A[2048 * 2048], B[2048 * 2048], C[2048 * 2048], D[2048 * 2048];
 
-void fill_matrix_random(uint64_t (*ARR)[2048]) {
+static inline size_t idx(size_t i, size_t j) {
+    return i * 2048 + j;
+}
+
+void fill_matrix_random(uint64_t (*ARR)) {
     for(size_t i = 0; i < 2048; i++) {
         for(size_t j = 0; j < 2048; j++) {
-            ARR[i][j] = rand()%1000;
+            ARR[idx(i,j)] = rand()%1000;
         }
     }
 }
-void zero_out_matrix(uint64_t (*ARR)[2048]) {
+void zero_out_matrix(uint64_t (*ARR)) {
     memset(ARR, 0, 2048 * 2048 * sizeof(uint64_t));
 }
 
-void multiply(uint64_t (*U)[2048], uint64_t (*V)[2048], uint64_t (*OUT)[2048]) {
+void multiply(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     for(size_t i = 0; i < 2048; i++) {
         for(size_t j = 0; j < 2048; j++) {
             for(size_t k = 0; k < 2048; k++) {
-                OUT[i][j] += U[i][k] * V[k][j];
+                OUT[idx(i,j)] += U[idx(i,k)] * V[idx(k,j)];
             }
         }
     }
 }
 
-void multiply_transposed(uint64_t (*U)[2048], uint64_t (*V)[2048], uint64_t (*OUT)[2048]) {
+void multiply_transposed(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     for(size_t i = 0; i < 2048; i++) {
         for(size_t j = 0; j < 2048; j++) {
             for(size_t k = 0; k < 2048; k++) {
-                OUT[i][j] += U[i][k] * V[j][k];
+                OUT[idx(i,j)] += U[idx(i,k)] * V[idx(j,k)];
             }
         }
     }
@@ -62,7 +66,7 @@ void *multiply_scoped(void *x) {
     for(size_t i = args.start; i < args.start + args.rows && i < 2048; i++) {
         for(size_t j = 0; j < 2048; j++) {
             for(size_t k = 0; k < 2048; k++) {
-                args.OUT[i][j] += args.U[i][k] * args.V[k][j];
+                args.OUT[idx(i,j)] += args.U[idx(i,k)] * args.V[idx(k,j)];
             }
         }
     }
@@ -75,15 +79,15 @@ void *multiply_transposed_scoped(void *x) {
     for(size_t i = args.start; i < args.start + args.rows && i < 2048; i++) {
         for(size_t j = 0; j < 2048; j++) {
             for(size_t k = 0; k < 2048; k++) {
-                args.OUT[i][j] += args.U[i][k] * args.V[j][k];
+                args.OUT[idx(i,j)] += args.U[idx(i,k)] * args.V[idx(j,k)];
             }
         }
     }
     return NULL;
 }
 
-void multiply_multithreaded(uint64_t (*U)[2048], uint64_t (*V)[2048],
-                                   uint64_t (*OUT)[2048]) {
+void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
+                                   uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     pthread_t threads[NTHREADS];
     thread_args_t args[NTHREADS];
@@ -103,8 +107,8 @@ void multiply_multithreaded(uint64_t (*U)[2048], uint64_t (*V)[2048],
     }
 }
 
-void multiply_transposed_multithreaded(uint64_t (*U)[2048], uint64_t (*V)[2048],
-                                   uint64_t (*OUT)[2048]) {
+void multiply_transposed_multithreaded(uint64_t (*U), uint64_t (*V),
+                                   uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     pthread_t threads[NTHREADS];
     thread_args_t args[NTHREADS];
@@ -124,25 +128,25 @@ void multiply_transposed_multithreaded(uint64_t (*U)[2048], uint64_t (*V)[2048],
     }
 }
 
-void add(uint64_t (*U)[2048], uint64_t (*V)[2048], uint64_t (*OUT)[2048]) {
+void add(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     for(size_t i = 0; i < 2048; i++) {
         for(size_t j = 0; j < 2048; j++) {
-            OUT[i][j] = U[i][j] + V[i][j];
+            OUT[idx(i,j)] = U[idx(i,j)] + V[idx(i,j)];
         }
     }
 }
 
-void transpose(uint64_t (*U)[2048], uint64_t (*OUT)[2048]) {
+void transpose(uint64_t (*U), uint64_t (*OUT)) {
     for(size_t i = 0; i < 2048; i++) {
         for(size_t j = 0; j < 2048; j++) {
-            OUT[j][i] = U[i][j];
+            OUT[idx(j,i)] = U[idx(i,j)];
         }
     }
 }
 
-void swap_ptrs(uint64_t (**U)[2048], uint64_t (**V)[2048]) {
-    uint64_t (*temp)[2048];
+void swap_ptrs(uint64_t (**U), uint64_t (**V)) {
+    uint64_t (*temp);
     temp = *U;
     *U = *V;
     *V = temp;
