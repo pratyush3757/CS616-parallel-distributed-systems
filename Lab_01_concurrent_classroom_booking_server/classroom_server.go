@@ -37,7 +37,7 @@ type class_tuple struct {
 type booked_classes map[class_tuple]int
 func (m booked_classes) String() string {
 	var sb strings.Builder
-	sb.WriteString("{")
+	sb.WriteString("\"{")
 	for k, _ := range m {
 		sb.WriteString(fmt.Sprintf("('%s', '%s'), ", k.Room, k.Slot))
 	}
@@ -45,7 +45,7 @@ func (m booked_classes) String() string {
 	if len(str) > 0 {
 		str = str[:len(str)-2]
 	}
-	str = str + "}"
+	str = str + "}\""
         return str
 }
 
