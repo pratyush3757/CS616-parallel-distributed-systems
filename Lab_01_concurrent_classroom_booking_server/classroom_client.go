@@ -11,43 +11,11 @@ import (
 	"strconv"
 )
 
-/*
-type request_type int
-
-const (
-	Book request_type = iota + 1 // 1
-	Cancel
-	Get
-)
-
-type status_code int
-
-const (
-	Invalid status_code = iota - 3 // -3
-	Cooldown
-	Already_Booked
-	OK
-)*/
-
 type request struct {
 	Timestamp int
 	Req_type int
 	Room string
 	Slot string
-}
-
-type class_tuple struct {
-	Room string
-	Slot string
-}
-
-type booked_classes map[class_tuple]int
-
-type response struct {
-	Req_type int
-	Room int
-	Status_code int
-	Class_list string
 }
 
 func getReqType(x string) int {
@@ -84,31 +52,10 @@ func main() {
 		fmt.Println("ERROR ::", err)
 		return
 	}
+	fmt.Println("Type,Room,Timeslot,Status")
 	
-        // 
         CONNECT := arguments[2]
-  //       conn, err := net.Dial("tcp", CONNECT)
-  //       if err != nil {
-		// fmt.Println("ERROR ::", err)
-  //               return
-  //       }
-        
-        // for {
-        //         reader := bufio.NewReader(os.Stdin)
-        //         fmt.Print(">> ")
-        //         text, _ := reader.ReadString('\n')
-        //         fmt.Fprintf(c, text+"\n")
-        // 
-        //         message, _ := bufio.NewReader(c).ReadString('\n')
-        //         fmt.Print("->: " + message)
-        //         if strings.TrimSpace(string(text)) == "STOP" {
-        //                 fmt.Println("TCP client exiting...")
-        //                 return
-        //         }
-        // }
 
-        // encoder := gob.NewEncoder(conn)
-	// dec := gob.NewDecoder(conn)
 	for {
 		conn, err := net.Dial("tcp", CONNECT)
 		if err != nil {
@@ -141,17 +88,8 @@ func main() {
 			fmt.Println("ERROR ::", err)
 			return
 		}
-		// fmt.Println(rec)
-		
-		// res := &booked_classes{}
-		// err = dec.Decode(res)
-		// if err != nil {
-			// fmt.Println("ERROR ::", err)
-			// return
-		// }
-                // fmt.Println("res")
+
 		message, _ := bufio.NewReader(conn).ReadString('\n')
-                // fmt.Print("->: " + message)
 		fmt.Print(message)
 		conn.Close()
 	}
