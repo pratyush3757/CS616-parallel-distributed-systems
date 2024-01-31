@@ -1,0 +1,15 @@
+Coherence: Load always results in a value of last store, irrespective of the isolation level.
+Only occures due to cache.
+Coherent schedule:
+t=19 CPU 1 Store X = 4
+t=20 CPU 2 Store X = 5
+t=21 CPU 1 Load X (assert X==5)
+
+Non-Coherent schedule:
+t=19 CPU 1 Store X = 4
+t=20 CPU 2 Store X = 5
+t=21 CPU 1 Load X (assert X==4)
+
+Ways to ensure coherence:
+- Write Propagation (write-invalidate or write-update)
+- Cache invalidation through controllers (Snooping)
