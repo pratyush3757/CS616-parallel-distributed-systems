@@ -61,6 +61,17 @@ void multiply_transposed(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     }
 }
 
+void multiply_transposed_out(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
+    zero_out_matrix(OUT);
+    for(size_t i = 0; i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
+            for(size_t k = 0; k < M_SIZE; k++) {
+                OUT[idx(j,i)] += U[idx(i,k)] * V[idx(j,k)];
+            }
+        }
+    }
+}
+
 void *multiply_scoped(void *x) {
     thread_args_t args;
     args = *(thread_args_t *)x;
@@ -87,6 +98,19 @@ void *multiply_transposed_scoped(void *x) {
     return NULL;
 }
 
+void *multiply_transposed_out_scoped(void *x) {
+    thread_args_t args;
+    args = *(thread_args_t *)x;
+    for(size_t i = args.start; i < args.start + args.rows && i < M_SIZE; i++) {
+        for(size_t j = 0; j < M_SIZE; j++) {
+            for(size_t k = 0; k < M_SIZE; k++) {
+                args.OUT[idx(j,i)] += args.U[idx(i,k)] * args.V[idx(j,k)];
+            }
+        }
+    }
+    return NULL;
+}
+
 void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
                                    uint64_t (*OUT)) {
     zero_out_matrix(OUT);
@@ -101,6 +125,35 @@ void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
         args[i] = x;
         status = pthread_create(&threads[i], NULL,
                                 multiply_scoped, (void *) &args[i]);
+        if (status != 0) {
+            perror("pthread_create failed");
+            exit(1);
+        }
+    }
+
+    for(size_t i = 0; i < NTHREADS; i++) {
+        status = pthread_join(threads[i], NULL);
+        if (status != 0) {
+            perror("pthread_join failed");
+            exit(1);
+        }
+    }
+}
+
+void multiply_transposed_out_multithreaded(uint64_t (*U), uint64_t (*V),
+                                   uint64_t (*OUT)) {
+    zero_out_matrix(OUT);
+    pthread_t threads[NTHREADS];
+    thread_args_t args[NTHREADS];
+    int status;
+    size_t rows = M_SIZE / NTHREADS;
+
+    for(size_t i = 0; i < NTHREADS; i++) {
+        size_t start = rows * i;
+        thread_args_t x = {U,V,OUT,start,rows};
+        args[i] = x;
+        status = pthread_create(&threads[i], NULL,
+                                multiply_transposed_out_scoped, (void *) &args[i]);
         if (status != 0) {
             perror("pthread_create failed");
             exit(1);
@@ -225,6 +278,13 @@ void simple_eqn_op_transposed_multithreaded(matrix_args_t pointers) {
     multiply_transposed_multithreaded(pointers.b, pointers.d, pointers.a);
 }
 
+void simple_eqn_op_transposed_out_multithreaded(matrix_args_t pointers) {
+    add(pointers.d, pointers.c, pointers.a);
+    transpose(pointers.a, pointers.d);
+    multiply_transposed_out_multithreaded(pointers.b, pointers.d, pointers.a);
+    transpose(pointers.a, pointers.d);
+}
+
 int main(int argc, char *argv[])
 {
     srand(time(NULL));
@@ -237,7 +297,7 @@ int main(int argc, char *argv[])
     fill_matrix_random(pointers.c);
     fill_matrix_random(pointers.d);
     // printf("%ld", sizeof(a));
-    simple_eqn_op_transposed_multithreaded(pointers);
+    simple_eqn_op_transposed_out_multithreaded(pointers);
     // zero_out_matrix(pointers.a);
     // swap_ptrs(&pointers.a, &pointers.d);
     // for(size_t i = 0; i < M_SIZE; i++) {
