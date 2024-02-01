@@ -1,13 +1,13 @@
 Compilation flags:
 ```bash
-gcc -Wall -Wpedantic -pg -o multiply.out multiply.c
+gcc -Wall -Wpedantic -pg -o gemm.out gemm.c
 ```
 Profiler used: `gprof`
 
 ### Trying out naive multiplication as a baseline:
 Initial Compilation flags:
 ```bash
-gcc -Wall -Wpedantic -pg -o multiply.out multiply.c
+gcc -Wall -Wpedantic -pg -o gemm.out gemm.c
 ```
 I started with a naive version which computed the equation as is:  
 ```

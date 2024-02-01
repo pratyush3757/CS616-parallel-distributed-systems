@@ -39,7 +39,7 @@ void zero_out_matrix(uint64_t (*ARR)) {
     memset(ARR, 0, M_SIZE * M_SIZE * sizeof(uint64_t));
 }
 
-void multiply(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
+void gemm(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     for(size_t i = 0; i < M_SIZE; i++) {
         for(size_t j = 0; j < M_SIZE; j++) {
@@ -50,7 +50,7 @@ void multiply(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     }
 }
 
-void multiply_transposed(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
+void gemm_transposed(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     for(size_t i = 0; i < M_SIZE; i++) {
         for(size_t j = 0; j < M_SIZE; j++) {
@@ -61,7 +61,7 @@ void multiply_transposed(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     }
 }
 
-void multiply_transposed_out(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
+void gemm_transposed_out(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     for(size_t i = 0; i < M_SIZE; i++) {
         for(size_t j = 0; j < M_SIZE; j++) {
@@ -72,7 +72,7 @@ void multiply_transposed_out(uint64_t (*U), uint64_t (*V), uint64_t (*OUT)) {
     }
 }
 
-void *multiply_scoped(void *x) {
+void *gemm_scoped(void *x) {
     thread_args_t args;
     args = *(thread_args_t *)x;
     for(size_t i = args.start; i < args.start + args.rows && i < M_SIZE; i++) {
@@ -85,7 +85,7 @@ void *multiply_scoped(void *x) {
     return NULL;
 }
 
-void *multiply_transposed_scoped(void *x) {
+void *gemm_transposed_scoped(void *x) {
     thread_args_t args;
     args = *(thread_args_t *)x;
     for(size_t i = args.start; i < args.start + args.rows && i < M_SIZE; i++) {
@@ -98,7 +98,7 @@ void *multiply_transposed_scoped(void *x) {
     return NULL;
 }
 
-void *multiply_transposed_out_scoped(void *x) {
+void *gemm_transposed_out_scoped(void *x) {
     thread_args_t args;
     args = *(thread_args_t *)x;
     for(size_t i = args.start; i < args.start + args.rows && i < M_SIZE; i++) {
@@ -111,7 +111,7 @@ void *multiply_transposed_out_scoped(void *x) {
     return NULL;
 }
 
-void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
+void gemm_multithreaded(uint64_t (*U), uint64_t (*V),
                                    uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     pthread_t threads[NTHREADS];
@@ -124,7 +124,7 @@ void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
         thread_args_t x = {U,V,OUT,start,rows};
         args[i] = x;
         status = pthread_create(&threads[i], NULL,
-                                multiply_scoped, (void *) &args[i]);
+                                gemm_scoped, (void *) &args[i]);
         if (status != 0) {
             perror("pthread_create failed");
             exit(1);
@@ -140,7 +140,7 @@ void multiply_multithreaded(uint64_t (*U), uint64_t (*V),
     }
 }
 
-void multiply_transposed_out_multithreaded(uint64_t (*U), uint64_t (*V),
+void gemm_transposed_out_multithreaded(uint64_t (*U), uint64_t (*V),
                                    uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     pthread_t threads[NTHREADS];
@@ -153,7 +153,7 @@ void multiply_transposed_out_multithreaded(uint64_t (*U), uint64_t (*V),
         thread_args_t x = {U,V,OUT,start,rows};
         args[i] = x;
         status = pthread_create(&threads[i], NULL,
-                                multiply_transposed_out_scoped, (void *) &args[i]);
+                                gemm_transposed_out_scoped, (void *) &args[i]);
         if (status != 0) {
             perror("pthread_create failed");
             exit(1);
@@ -169,7 +169,7 @@ void multiply_transposed_out_multithreaded(uint64_t (*U), uint64_t (*V),
     }
 }
 
-void multiply_transposed_multithreaded(uint64_t (*U), uint64_t (*V),
+void gemm_transposed_multithreaded(uint64_t (*U), uint64_t (*V),
                                    uint64_t (*OUT)) {
     zero_out_matrix(OUT);
     pthread_t threads[NTHREADS];
@@ -182,7 +182,7 @@ void multiply_transposed_multithreaded(uint64_t (*U), uint64_t (*V),
         thread_args_t x = {U,V,OUT,start,rows};
         args[i] = x;
         status = pthread_create(&threads[i], NULL,
-                                multiply_transposed_scoped, (void *) &args[i]);
+                                gemm_transposed_scoped, (void *) &args[i]);
         if (status != 0) {
             perror("pthread_create failed");
             exit(1);
@@ -223,9 +223,9 @@ void swap_ptrs(uint64_t (**U), uint64_t (**V)) {
 }
 
 void naive_op(matrix_args_t pointers) {
-    multiply(pointers.b, pointers.d, pointers.a);
+    gemm(pointers.b, pointers.d, pointers.a);
     swap_ptrs(&pointers.a, &pointers.d);
-    multiply(pointers.b, pointers.c, pointers.a);
+    gemm(pointers.b, pointers.c, pointers.a);
     swap_ptrs(&pointers.c, &pointers.a);
     add(pointers.d, pointers.c, pointers.a);
 }
@@ -233,27 +233,27 @@ void naive_op(matrix_args_t pointers) {
 void simple_eqn_op(matrix_args_t pointers) {
     add(pointers.d, pointers.c, pointers.a);
     swap_ptrs(&pointers.a, &pointers.d);
-    multiply(pointers.b, pointers.d, pointers.a);
+    gemm(pointers.b, pointers.d, pointers.a);
 }
 
 void naive_op_transposed(matrix_args_t pointers) {
     transpose(pointers.d, pointers.a);
-    multiply_transposed(pointers.b, pointers.a, pointers.d);
+    gemm_transposed(pointers.b, pointers.a, pointers.d);
     transpose(pointers.c, pointers.a);
-    multiply_transposed(pointers.b, pointers.a, pointers.c);
+    gemm_transposed(pointers.b, pointers.a, pointers.c);
     add(pointers.d, pointers.c, pointers.a);
 }
 
 void simple_eqn_op_transposed(matrix_args_t pointers) {
     add(pointers.d, pointers.c, pointers.a);
     transpose(pointers.a, pointers.d);
-    multiply_transposed(pointers.b, pointers.d, pointers.a);
+    gemm_transposed(pointers.b, pointers.d, pointers.a);
 }
 
 void naive_op_multithreaded(matrix_args_t pointers) {
-    multiply_multithreaded(pointers.b, pointers.d, pointers.a);
+    gemm_multithreaded(pointers.b, pointers.d, pointers.a);
     swap_ptrs(&pointers.a, &pointers.d);
-    multiply_multithreaded(pointers.b, pointers.c, pointers.a);
+    gemm_multithreaded(pointers.b, pointers.c, pointers.a);
     swap_ptrs(&pointers.c, &pointers.a);
     add(pointers.d, pointers.c, pointers.a);
 }
@@ -261,27 +261,27 @@ void naive_op_multithreaded(matrix_args_t pointers) {
 void simple_eqn_op_multithreaded(matrix_args_t pointers) {
     add(pointers.d, pointers.c, pointers.a);
     swap_ptrs(&pointers.a, &pointers.d);
-    multiply_multithreaded(pointers.b, pointers.d, pointers.a);
+    gemm_multithreaded(pointers.b, pointers.d, pointers.a);
 }
 
 void naive_op_transposed_multithreaded(matrix_args_t pointers) {
     transpose(pointers.d, pointers.a);
-    multiply_transposed_multithreaded(pointers.b, pointers.a, pointers.d);
+    gemm_transposed_multithreaded(pointers.b, pointers.a, pointers.d);
     transpose(pointers.c, pointers.a);
-    multiply_transposed_multithreaded(pointers.b, pointers.a, pointers.c);
+    gemm_transposed_multithreaded(pointers.b, pointers.a, pointers.c);
     add(pointers.d, pointers.c, pointers.a);
 }
 
 void simple_eqn_op_transposed_multithreaded(matrix_args_t pointers) {
     add(pointers.d, pointers.c, pointers.a);
     transpose(pointers.a, pointers.d);
-    multiply_transposed_multithreaded(pointers.b, pointers.d, pointers.a);
+    gemm_transposed_multithreaded(pointers.b, pointers.d, pointers.a);
 }
 
 void simple_eqn_op_transposed_out_multithreaded(matrix_args_t pointers) {
     add(pointers.d, pointers.c, pointers.a);
     transpose(pointers.a, pointers.d);
-    multiply_transposed_out_multithreaded(pointers.b, pointers.d, pointers.a);
+    gemm_transposed_out_multithreaded(pointers.b, pointers.d, pointers.a);
     transpose(pointers.a, pointers.d);
 }
 
